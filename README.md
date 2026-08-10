@@ -1,5 +1,9 @@
 # opencode-skill-usage
 
+[![npm version](https://img.shields.io/npm/v/opencode-skill-usage.svg)](https://www.npmjs.com/package/opencode-skill-usage)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
+
 OpenCode plugin that records skill invocations and auto-registers a `/skill-usage` slash command for querying the stats.
 
 - **Write**: `tool.execute.before` + `command.execute.before` hooks record every skill invocation — both agent-initiated calls and user slash-commands.
