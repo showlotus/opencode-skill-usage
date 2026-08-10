@@ -1,0 +1,93 @@
+# opencode-skill-usage
+
+OpenCode plugin that records skill invocations and auto-registers a `/skill-usage` slash command for querying the stats.
+
+- **Write**: `tool.execute.before` + `command.execute.before` hooks record every skill invocation — both agent-initiated calls and user slash-commands.
+- **Query**: a `config` hook auto-registers the bundled `skill-usage` command so it is available as `/skill-usage` with zero extra configuration.
+
+Zero runtime dependencies, plain JavaScript ESM.
+
+## Install
+
+Add the plugin to `~/.config/opencode/opencode.json`:
+
+```jsonc
+{
+  "plugin": ["file:///absolute/path/to/opencode-skill-usage"]
+}
+```
+
+For npm installs:
+
+```jsonc
+{
+  "plugin": ["opencode-skill-usage"]
+}
+```
+
+Restart OpenCode. The `/skill-usage` command is registered automatically by the plugin's `config` hook — no `skills.paths` or manual skill setup needed.
+
+## Usage
+
+Run `/skill-usage` in the TUI, or just ask the agent:
+
+- "Show me skill call stats"
+- "Which skill was called the most in the last 7 days"
+- "How many skill calls happened inside the opencode-image-vision project"
+
+The command injects the skill body (query templates + log format docs) into the session, and the agent aggregates the log as requested.
+
+## Log location
+
+The `skill-usage.log` file is generated next to the plugin script `plugin/index.js`:
+
+- Local `file://` reference: `opencode-skill-usage/plugin/skill-usage.log`
+- npm install: `~/.cache/opencode/node_modules/opencode-skill-usage/plugin/skill-usage.log`
+
+Each line is TSV with 4 columns:
+
+```
+timestamp	skill name	project directory	source
+[2026/08/10 23:28:22]	tech-briefing	/Users/showlotus/Desktop/MyCode/xxx	command
+```
+
+The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The source is `skill` (agent-initiated) or `command` (user slash-command).
+
+## Manual aggregation
+
+```bash
+# Count calls per skill name, highest first
+cut -f2 <plugin-dir>/plugin/skill-usage.log | sort | uniq -c | sort -rn
+```
+
+## How it works
+
+```
+opencode.json plugin entry
+        ↓
+plugin loaded → config hook fires
+        ↓
+registers /skill-usage command (template = bundled SKILL.md body)
+        ↓
+tool.execute.before / command.execute.before hooks
+append TSV rows to skill-usage.log on every skill invocation
+```
+
+The `config` hook works because Command init runs after Plugin config hooks (the Command layer depends on the Skill layer, which finishes before Command starts).
+
+## Project layout
+
+```
+opencode-skill-usage/
+├── package.json          # npm manifest, files includes plugin/ and skills/
+├── plugin/
+│   └── index.js          # config hook (register command) + tool/command execute hooks (write log)
+├── skills/
+│   └── skill-usage/
+│       └── SKILL.md      # query templates, used as the command template
+└── README.md
+```
+
+## License
+
+MIT

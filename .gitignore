@@ -1,0 +1,12 @@
+node_modules/
+*.log
+
+# opencode runtime
+.omo/
+
+# OS
+.DS_Store
+
+# editor
+*.swp
+*.swo
