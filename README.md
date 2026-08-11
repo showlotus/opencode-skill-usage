@@ -41,6 +41,8 @@ Run `/skill-usage` in the TUI, or just ask the agent:
 
 The command injects the skill body (query templates + log format docs) into the session, and the agent aggregates the log as requested.
 
+The agent also triggers the query automatically when the conversation mentions skill usage statistics or reports — even content that looks like plain context or notes — since the injected skill body instructs it to treat such content as an active request.
+
 ## Log location
 
 The `skill-usage.log` file is generated next to the plugin script `plugin/index.js`:
