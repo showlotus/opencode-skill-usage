@@ -1,6 +1,6 @@
 {
   "name": "opencode-skill-usage",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "OpenCode plugin that records skill invocations and auto-registers a /skill-usage command for querying stats",
   "type": "module",
   "packageManager": "pnpm@8.11.0",
