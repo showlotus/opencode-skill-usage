@@ -31,11 +31,11 @@ The log file is named `skill-usage.log`, written automatically by the opencode-s
 Four TSV columns per line, no header:
 
 ```
-timestamp	skill name	project directory	source
-[2026/08/10 23:28:22]	tech-briefing	/Users/showlotus/Desktop/MyCode/xxx	command
+timestamp	skill name	project directory	call_type
+[2026/08/10 23:28:22]	tech-briefing	/Users/showlotus/Desktop/MyCode/xxx	manual
 ```
 
-The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The source is `skill` (agent-initiated via tool) or `command` (user slash-command).
+The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The call_type is manual (user slash-command) or auto (agent-initiated).
 
 ## Query templates
 
@@ -65,13 +65,13 @@ Match the project directory keyword against column 3.
 awk -F'\t' '$3 ~ /opencode-image-vision/ {print $2}' "$LOG" | sort | uniq -c | sort -rn
 ```
 
-### 4. Filter by source
+### 4. Filter by call_type
 
 ```bash
-# Example: only agent-initiated calls
-awk -F'\t' '$4 == "skill" {print $2}' "$LOG" | sort | uniq -c | sort -rn
-# Example: only slash-command calls
-awk -F'\t' '$4 == "command" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+# Example: only manual calls (user slash-command)
+awk -F'\t' '$4 == "manual" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+# Example: only auto calls (agent-initiated)
+awk -F'\t' '$4 == "auto" {print $2}' "$LOG" | sort | uniq -c | sort -rn
 ```
 
 ### 5. Per-skill call log
@@ -81,15 +81,15 @@ awk -F'\t' '$4 == "command" {print $2}' "$LOG" | sort | uniq -c | sort -rn
 awk -F'\t' '$2 == "tech-briefing"' "$LOG"
 ```
 
-### 6. Combined filter (time + project + source + skill)
+### 6. Combined filter (time + project + call_type + skill)
 
 ```bash
-awk -F'\t' '$1 >= "[2026/08/01" && $1 < "[2026/08/09" && $3 ~ /opencode-image-vision/ && $4 == "command" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+awk -F'\t' '$1 >= "[2026/08/01" && $1 < "[2026/08/09" && $3 ~ /opencode-image-vision/ && $4 == "manual" {print $2}' "$LOG" | sort | uniq -c | sort -rn
 ```
 
 ## Output requirements
 
 - Render rankings as a Markdown table: skill name | call count, sorted descending by count.
-- For per-skill detail, list timestamp, project directory, and source.
+- For per-skill detail, list timestamp, project directory, and call_type.
 - If the log file is missing or empty, tell the user explicitly that there are no records yet, instead of emitting an empty table.
-- Combine the filters the user mentioned (time, project, skill name, source) whenever possible, do not just dump the full ranking.
+- Combine the filters the user mentioned (time, project, skill name, call_type) whenever possible, do not just dump the full ranking.

@@ -51,11 +51,11 @@ The `skill-usage.log` file is generated next to the plugin script `plugin/index.
 Each line is TSV with 4 columns:
 
 ```
-timestamp	skill name	project directory	source
-[2026/08/10 23:28:22]	tech-briefing	/Users/showlotus/Desktop/MyCode/xxx	command
+timestamp	skill name	project directory	call_type
+[2026/08/10 23:28:22]	tech-briefing	/Users/showlotus/Desktop/MyCode/xxx	manual
 ```
 
-The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The source is `skill` (agent-initiated) or `command` (user slash-command).
+The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The call_type is manual (user slash-command) or auto (agent-initiated).
 
 ## Manual aggregation
 
