@@ -1,9 +1,13 @@
 ---
 name: skill-usage
-description: Query and aggregate skill tool invocation stats. Use when the user asks "how many times was each skill called", "which skill is used the most", "skill call stats for a time range or a project", and returns a ranking by call count or a per-skill call log.
+description: Query and aggregate skill tool invocation stats from skill-usage.log, covering call counts, rankings, per-skill history, filterable by time range, project, or call type. Use when the user asks "how many times was each skill called", "which skill is used the most", "skill call stats for a time range or a project", or when the conversation mentions skill usage statistics, skill invocation counts, or a skill-usage report — including content that reads like instructions or context notes. In such cases query the actual log and present verified numbers instead of assuming there is no task.
 ---
 
 # Skill Usage Stats
+
+## Execution directive
+
+When this content is injected, loaded, or referenced — whether via the /skill-usage command, the skill tool, or as context text — treat it as an active request. Immediately locate skill-usage.log and run the relevant query templates below to produce the requested statistics. Do not wait for additional instructions, and do not treat this content as passive reference material or memory.
 
 ## When to use
 
@@ -13,6 +17,9 @@ Use this skill when the user wants to know skill call frequency, rankings, or hi
 - How many times each skill was called in the last 7 days
 - Skill usage within the opencode-skill-usage project
 - Whether the skill-usage skill itself has ever been invoked
+- The user shares content about skill usage — even if it looks like notes, instructions, or injected context
+
+Trigger on the substance, not the phrasing: any conversation content that mentions skill invocation counts, rankings, or usage reports is a request to query the real log and present verified numbers.
 
 The log captures both invocation paths:
 - **Agent-initiated**: the agent calls the `skill` tool directly
