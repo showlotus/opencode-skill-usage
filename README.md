@@ -45,10 +45,11 @@ The agent also triggers the query automatically when the conversation mentions s
 
 ## Log location
 
-The `skill-usage.log` file is generated next to the plugin script `plugin/index.js`:
+The `skill-usage.log` file is written to the opencode config directory, independent of where the plugin is installed:
 
-- Local `file://` reference: `opencode-skill-usage/plugin/skill-usage.log`
-- npm install: `~/.cache/opencode/node_modules/opencode-skill-usage/plugin/skill-usage.log`
+- `~/.config/opencode/skill-usage.log`
+
+Because the log lives outside the plugin package directory, upgrading or reinstalling the plugin never deletes it.
 
 Each line is TSV with 4 columns:
 
@@ -63,7 +64,7 @@ The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The call_type is 
 
 ```bash
 # Count calls per skill name, highest first
-cut -f2 <plugin-dir>/plugin/skill-usage.log | sort | uniq -c | sort -rn
+cut -f2 ~/.config/opencode/skill-usage.log | sort | uniq -c | sort -rn
 ```
 
 ## How it works

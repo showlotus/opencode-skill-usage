@@ -27,10 +27,10 @@ The log captures both invocation paths:
 
 ## Locate the log
 
-The log file is named `skill-usage.log`, written automatically by the opencode-skill-usage plugin. Locate it in this order:
+The log file is named `skill-usage.log`, written automatically by the opencode-skill-usage plugin to the opencode config directory (independent of where the plugin is installed, so plugin upgrades never lose the log). Locate it in this order:
 
-1. Glob the current workspace for `**/skill-usage.log` and use the first match.
-2. If not found, check the npm install cache path: `~/.cache/opencode/node_modules/@showlotus/opencode-skill-usage/plugin/skill-usage.log`
+1. Primary location: `~/.config/opencode/skill-usage.log`
+2. If not found, glob the current workspace for `**/skill-usage.log` and use the first match.
 3. If still not found, ask the user where the plugin is installed.
 
 ## Log format

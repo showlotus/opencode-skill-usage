@@ -1,9 +1,10 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
+import { homedir } from 'node:os'
 import { appendFileSync, readFileSync } from 'node:fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const logPath = join(__dirname, 'skill-usage.log')
+const logPath = join(homedir(), '.config', 'opencode', 'skill-usage.log')
 const skillMdPath = resolve(__dirname, '../skills/skill-usage/SKILL.md')
 
 // Read the bundled skill body once at module load, stripping YAML frontmatter
