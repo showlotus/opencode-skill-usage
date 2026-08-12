@@ -1,0 +1,20 @@
+name: AI Code Review
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  deepseek-review:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    name: Code Review
+    steps:
+      - name: DeepSeek Code Review
+        uses: hustcer/deepseek-review@v1
+        with:
+          chat-token: ${{ secrets.CHAT_TOKEN }}
+          sys-prompt: "You are a professional code review assistant for an OpenCode plugin project (Node.js ESM, pnpm). Analyze GitHub Pull Request code changes and identify potential code style issues, logic errors, security vulnerabilities, and provide improvement suggestions. List problems and recommendations in a concise and clear manner."
