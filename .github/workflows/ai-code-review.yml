@@ -17,4 +17,5 @@ jobs:
         uses: hustcer/deepseek-review@v1
         with:
           chat-token: ${{ secrets.CHAT_TOKEN }}
+          model: 'deepseek-v4-flash'
           sys-prompt: "You are a professional code review assistant for an OpenCode plugin project (Node.js ESM, pnpm). Analyze GitHub Pull Request code changes and identify potential code style issues, logic errors, security vulnerabilities, and provide improvement suggestions. List problems and recommendations in a concise and clear manner."
