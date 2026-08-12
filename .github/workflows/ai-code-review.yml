@@ -3,6 +3,8 @@ name: AI Code Review
 on:
   pull_request_target:
     types: [opened, reopened, synchronize]
+  issue_comment:
+    types: [created]
 
 permissions:
   pull-requests: write
@@ -18,4 +20,6 @@ jobs:
         with:
           chat-token: ${{ secrets.CHAT_TOKEN }}
           model: 'deepseek-v4-flash'
+          watch-mention: '@github-actions'
+          allowed-associations: 'OWNER,MEMBER,COLLABORATOR'
           sys-prompt: "You are a professional code review assistant for an OpenCode plugin project (Node.js ESM, pnpm). Analyze GitHub Pull Request code changes and identify potential code style issues, logic errors, security vulnerabilities, and provide improvement suggestions. List problems and recommendations in a concise and clear manner."
