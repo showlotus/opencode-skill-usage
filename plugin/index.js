@@ -24,6 +24,16 @@ const timestamp = () => {
   return `[${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}]`
 }
 
+/**
+ * 格式化日期为可读字符串
+ * @param {Date} date - 待格式化的日期对象
+ * @returns {string} 格式化后的日期字符串，如 "2024-01-15"
+ */
+const formatDate = (date) => {
+  const p = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`
+}
+
 // OpenCode plugin that records skill invocations from two sources:
 //   1. tool.execute.before — agent-initiated skill tool calls (call_type: "auto")
 //   2. command.execute.before — user slash-command invocations (call_type: "manual")
