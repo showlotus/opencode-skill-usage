@@ -1,10 +1,19 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { appendFileSync, readFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const logPath = join(homedir(), '.config', 'opencode', 'skill-usage.log')
+const configDir = join(homedir(), '.config', 'opencode')
+const logPath = join(configDir, 'skill-usage.jsonl')
+const legacyLogPath = join(configDir, 'skill-usage.log')
 const skillMdPath = resolve(__dirname, '../skills/skill-usage/SKILL.md')
 
 // Read the bundled skill body once at module load, stripping YAML frontmatter
@@ -22,8 +31,45 @@ const skillContent = (() => {
 const timestamp = () => {
   const d = new Date()
   const p = (n) => String(n).padStart(2, '0')
-  return `[${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}]`
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
+
+// One-time migration: convert a legacy TSV log (skill-usage.log) to JSONL and
+// remove it. Runs at module load; failures are silent so the plugin keeps working.
+const migrateLegacyLog = () => {
+  try {
+    if (!existsSync(legacyLogPath)) return
+    if (existsSync(logPath)) {
+      // Migration already happened; the old file is just a leftover.
+      unlinkSync(legacyLogPath)
+      return
+    }
+    const lines = readFileSync(legacyLogPath, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        if (line.startsWith('{')) return line
+        const m = line.match(/^\[([^\]]*)\]\t([^\t]*)\t([^\t]*)\t([^\t]*)$/)
+        if (!m) return null
+        const [, time, skill, directory, callType] = m
+        return JSON.stringify({
+          timestamp: time,
+          skill,
+          directory,
+          call_type: callType,
+        })
+      })
+      .filter(Boolean)
+    const tmpPath = `${logPath}.tmp`
+    writeFileSync(tmpPath, lines.length ? lines.join('\n') + '\n' : '')
+    renameSync(tmpPath, logPath)
+    unlinkSync(legacyLogPath)
+  } catch {
+    // ignore: fall back to normal operation
+  }
+}
+
+migrateLegacyLog()
 
 // OpenCode plugin that records skill invocations from two sources:
 //   1. tool.execute.before — agent-initiated skill tool calls (call_type: "auto")
@@ -33,14 +79,23 @@ const timestamp = () => {
 // This works because Command init runs after Plugin config hooks (Command
 // layer depends on Skill, which finishes before Command starts).
 // System commands (name contains ".") are filtered, since skill ids follow
-// kebab-case without dots. Each invocation appends a TSV row (timestamp, skill
-// name, project directory, call_type) to skill-usage.log next to this file.
+// kebab-case without dots. Each invocation appends one JSONL line (timestamp,
+// skill name, project directory, call_type) to skill-usage.jsonl next to this
+// file. A legacy skill-usage.log (TSV) is migrated once at module load.
 export default {
   id: 'skill-usage',
   server: async (input) => {
     const directory = input?.directory
     const record = (name, callType) =>
-      appendFileSync(logPath, `${timestamp()}\t${name}\t${directory ?? 'unknown'}\t${callType}\n`)
+      appendFileSync(
+        logPath,
+        JSON.stringify({
+          timestamp: timestamp(),
+          skill: name,
+          directory: directory ?? 'unknown',
+          call_type: callType,
+        }) + '\n'
+      )
     return {
       config: async (config) => {
         config.command = config.command || {}

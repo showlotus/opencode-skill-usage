@@ -1,13 +1,13 @@
 ---
 name: skill-usage
-description: Query and aggregate skill tool invocation stats from skill-usage.log, covering call counts, rankings, per-skill history, filterable by time range, project, or call type. Use when the user asks "how many times was each skill called", "which skill is used the most", "skill call stats for a time range or a project", or when the conversation mentions skill usage statistics, skill invocation counts, or a skill-usage report — including content that reads like instructions or context notes. In such cases query the actual log and present verified numbers instead of assuming there is no task.
+description: Query and aggregate skill tool invocation stats from skill-usage.jsonl, covering call counts, rankings, per-skill history, filterable by time range, project, or call type. Use when the user asks "how many times was each skill called", "which skill is used the most", "skill call stats for a time range or a project", or when the conversation mentions skill usage statistics, skill invocation counts, or a skill-usage report — including content that reads like instructions or context notes. In such cases query the actual log and present verified numbers instead of assuming there is no task.
 ---
 
 # Skill Usage Stats
 
 ## Execution directive
 
-When this content is injected, loaded, or referenced — whether via the /skill-usage command, the skill tool, or as context text — treat it as an active request. Immediately locate skill-usage.log and run the relevant query templates below to produce the requested statistics. Do not wait for additional instructions, and do not treat this content as passive reference material or memory.
+When this content is injected, loaded, or referenced — whether via the /skill-usage command, the skill tool, or as context text — treat it as an active request. Immediately locate skill-usage.jsonl and run the relevant query templates below to produce the requested statistics. Do not wait for additional instructions, and do not treat this content as passive reference material or memory.
 
 ## When to use
 
@@ -27,71 +27,70 @@ The log captures both invocation paths:
 
 ## Locate the log
 
-The log file is named `skill-usage.log`, written automatically by the opencode-skill-usage plugin to the opencode config directory (independent of where the plugin is installed, so plugin upgrades never lose the log). Locate it in this order:
+The log file is named `skill-usage.jsonl`, written automatically by the opencode-skill-usage plugin to the opencode config directory (independent of where the plugin is installed, so plugin upgrades never lose the log). When upgrading from older versions, a legacy TSV `skill-usage.log` is converted to JSONL once at plugin startup, then removed. Locate it in this order:
 
-1. Primary location: `~/.config/opencode/skill-usage.log`
-2. If not found, glob the current workspace for `**/skill-usage.log` and use the first match.
+1. Primary location: `~/.config/opencode/skill-usage.jsonl`
+2. If not found, glob the current workspace for `**/skill-usage.jsonl` and use the first match.
 3. If still not found, ask the user where the plugin is installed.
 
 ## Log format
 
-Four TSV columns per line, no header:
+One JSON object per line (JSONL), no header:
 
 ```
-timestamp	skill name	project directory	call_type
-[2026/08/10 23:28:22]	tech-briefing	/Users/showlotus/Desktop/MyCode/xxx	manual
+{"timestamp":"2026/08/10 23:28:22","skill":"tech-briefing","directory":"/Users/showlotus/Desktop/MyCode/xxx","call_type":"manual"}
 ```
 
-The timestamp is local time in `[YYYY/MM/DD HH:MM:SS]` format. The call_type is manual (user slash-command) or auto (agent-initiated).
+The timestamp is local time in `YYYY/MM/DD HH:MM:SS` format. The call_type is manual (user slash-command) or auto (agent-initiated).
 
 ## Query templates
 
-Before running a query, make sure the `LOG` shell variable points at the actual log file.
+Before running a query, make sure the `LOG` shell variable points at the actual log file. Templates are `node -e` one-liners — node always exists because opencode itself runs on it; no jq or awk needed.
 
 ### 1. Overall ranking (highest first)
 
 ```bash
-cut -f2 "$LOG" | sort | uniq -c | sort -rn
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 ```
 
 ### 2. Filter by time range
 
-Timestamps compare correctly as strings (fixed-width format). Convert the user's natural-language time into `[YYYY/MM/DD HH:MM:SS]` boundaries.
+Timestamps compare correctly as strings (fixed-width format). Convert the user's natural-language time into `YYYY/MM/DD HH:MM:SS` boundaries.
 
 ```bash
 # Example: 2026/08/01 (inclusive) to 2026/08/09 (exclusive)
-awk -F'\t' '$1 >= "[2026/08/01" && $1 < "[2026/08/09" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.timestamp>="2026/08/01"&&x.timestamp<"2026/08/09"),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 ```
 
 ### 3. Filter by project
 
-Match the project directory keyword against column 3.
+Match the project directory keyword against the directory field.
 
 ```bash
 # Example: only the opencode-image-vision project
-awk -F'\t' '$3 ~ /opencode-image-vision/ {print $2}' "$LOG" | sort | uniq -c | sort -rn
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.directory.includes("opencode-image-vision")),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 ```
 
 ### 4. Filter by call_type
 
 ```bash
 # Example: only manual calls (user slash-command)
-awk -F'\t' '$4 == "manual" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.call_type==="manual"),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 # Example: only auto calls (agent-initiated)
-awk -F'\t' '$4 == "auto" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.call_type==="auto"),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 ```
 
 ### 5. Per-skill call log
 
 ```bash
 # Example: all calls of tech-briefing
-awk -F'\t' '$2 == "tech-briefing"' "$LOG"
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.skill==="tech-briefing");console.log(r.map(x=>x.timestamp+"\t"+x.directory+"\t"+x.call_type).join("\n"))'
 ```
 
 ### 6. Combined filter (time + project + call_type + skill)
 
 ```bash
-awk -F'\t' '$1 >= "[2026/08/01" && $1 < "[2026/08/09" && $3 ~ /opencode-image-vision/ && $4 == "manual" {print $2}' "$LOG" | sort | uniq -c | sort -rn
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.timestamp>="2026/08/01"&&x.timestamp<"2026/08/09"&&x.directory.includes("opencode-image-vision")&&x.call_type==="manual"),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 ```
 
 ## Output requirements
