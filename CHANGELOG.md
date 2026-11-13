@@ -1,4 +1,6 @@
 
+## [2.0.1](https://github.com/showlotus/opencode-skill-usage/compare/v2.0.0...v2.0.1) (2026-11-13)
+
 # [2.0.0](https://github.com/showlotus/opencode-skill-usage/compare/08a74715dc79c8b1ad5fa8fdeb6db0b85ce1ed87...v2.0.0) (2026-11-13)
 
 * feat!: drop opencode 1.x support and publish from version tags ([12b1a72](https://github.com/showlotus/opencode-skill-usage/commit/12b1a7284b2510e3550c14115f7aad4c5b8a414a))
