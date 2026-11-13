@@ -34,8 +34,8 @@ const timestamp = () => {
   return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
-// Append one JSONL record. Both the V1 and V2 implementations share this so the
-// on-disk format stays identical across opencode versions.
+// Append one JSONL record. Kept as a single writer so the on-disk format stays
+// identical across plugin versions.
 const appendRecord = (name, callType, directory) => {
   appendFileSync(
     logPath,
@@ -85,73 +85,48 @@ const migrateLegacyLog = () => {
 
 migrateLegacyLog()
 
-// OpenCode plugin that records skill invocations from two sources:
+// OpenCode v2 plugin that records skill invocations from two sources:
 //   1. agent-initiated skill tool calls (call_type: "auto")
 //   2. user slash-command invocations (call_type: "manual")
-// The command hook registers the bundled skill as a slash command so it is
-// auto-available without manual opencode.json skills.paths configuration.
-// System commands (name contains ".") are filtered, since skill ids follow
-// kebab-case without dots. Each invocation appends one JSONL line (timestamp,
-// skill name, project directory, call_type) to skill-usage.jsonl next to this
-// file. A legacy skill-usage.log (TSV) is migrated once at module load.
+// The command registers the bundled skill body as the /skill-usage template so
+// it is available without manual opencode.json skills.paths configuration.
+// Each invocation appends one JSONL line (timestamp, skill name, project
+// directory, call_type) to skill-usage.jsonl next to this file. A legacy
+// skill-usage.log (TSV) is migrated once at module load.
 //
-// The same default export supports both plugin APIs:
-//   - opencode 1.x calls server() and uses the returned string-keyed hooks
-//   - opencode 2.x reads id/setup() and uses the domain APIs on the context
+// Only the opencode 2.x plugin API is supported: 2.x reads id/setup() and
+// passes the domain APIs on the context. opencode 1.x called server(); that
+// hook was removed in 2.0.0, so 1.x users must pin opencode-skill-usage@1.
 export default {
   id: 'skill-usage',
-  server: async (input) => {
-    const directory = input?.directory
-    return {
-      config: async (config) => {
-        config.command = config.command || {}
-        if (!config.command['skill-usage']) {
-          config.command['skill-usage'] = {
-            description: 'Query and aggregate skill invocation stats',
-            template: skillContent,
-          }
-        }
-      },
-      'tool.execute.before': async (toolInput, output) => {
-        if (toolInput.tool !== 'skill') return
-        appendRecord(output.args?.name ?? 'unknown', 'auto', directory)
-      },
-      'command.execute.before': async (cmdInput) => {
-        const name = cmdInput.command
-        if (!name || name.includes('.')) return
-        appendRecord(name, 'manual', directory)
-      },
-    }
-  },
   setup: async (ctx) => {
     const directory = ctx.location?.directory
 
-    // Register /skill-usage as a command unless the user already defined one.
-    // V2 has no global command.execute.before, so the command records itself.
-    const listed = await ctx.command.list().catch(() => null)
-    const commands = Array.isArray(listed) ? listed : listed?.data
-    const hasCommand = Array.isArray(commands) && commands.some((c) => c?.name === 'skill-usage')
-    if (!hasCommand) {
-      await ctx.command.transform((editor) => {
-        editor.add({
-          name: 'skill-usage',
-          description: 'Query and aggregate skill invocation stats',
-          execute: async ({ sessionID, prompt, delivery }) => {
-            appendRecord('skill-usage', 'manual', directory)
-            const args = typeof prompt?.text === 'string' ? prompt.text.trim() : ''
-            await ctx.session.prompt({
-              ...prompt,
-              sessionID,
-              text: args ? `${skillContent}\n\n${args}` : skillContent,
-              delivery,
-            })
-          },
-        })
+    // Register /skill-usage unconditionally. `editor.add` is a name-keyed set,
+    // and opencode registers config commands after plugin transforms (the
+    // config command plugin runs in the post group), so a user-defined
+    // /skill-usage still wins. 2.x has no global command.execute.before, so
+    // the command records itself.
+    await ctx.command.transform((editor) => {
+      editor.add({
+        name: 'skill-usage',
+        description: 'Query and aggregate skill invocation stats',
+        execute: async ({ sessionID, prompt, delivery }) => {
+          appendRecord('skill-usage', 'manual', directory)
+          const args = typeof prompt?.text === 'string' ? prompt.text.trim() : ''
+          await ctx.session.prompt({
+            ...prompt,
+            sessionID,
+            text: args ? `${skillContent}\n\n${args}` : skillContent,
+            delivery,
+          })
+        },
       })
-    }
+    })
 
-    // Agent-initiated skill calls. V2's skill tool takes { id } instead of the
-    // V1 { name }; keep a fallback so both shapes are recorded.
+    // Agent-initiated skill calls. 2.x's skill tool takes { id }; keep a
+    // fallback so a nonstandard tool named "skill" that passes { name } is
+    // still recorded.
     await ctx.tool.hook('execute.before', (event) => {
       if (event.tool !== 'skill') return
       const input = event.input

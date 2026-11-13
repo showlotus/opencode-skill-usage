@@ -1,14 +1,21 @@
-name: Publish to npm
+name: Publish
 
 on:
-  workflow_dispatch:  # 手动触发，避免误发布
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
+      contents: read
       id-token: write
-
     steps:
       - uses: actions/checkout@v4
 
@@ -18,11 +25,116 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - name: Publish to NPM
-        run: pnpm publish --access public --no-git-checks
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "publishing $VERSION"
+
+      - name: Check package contents
+        run: |
+          node --check plugin/index.js
+          npm pack --dry-run --json > /tmp/pack.json
+          node -e '
+            const files = require("/tmp/pack.json")[0].files.map((file) => file.path)
+            const required = ["plugin/index.js", "skills/skill-usage/SKILL.md"]
+            const missing = required.filter((file) => !files.includes(file))
+            if (missing.length) {
+              console.error("missing from tarball: " + missing.join(", "))
+              process.exit(1)
+            }
+            console.log("tarball ok: " + files.length + " files")
+          '
+
+      - name: Derive npm dist-tag
+        run: echo "DIST_TAG=$(node -p "require('./package.json').version.match(/-([^.]+)/)?.[1] ?? 'latest'")" >> "$GITHUB_ENV"
+
+      - name: Skip already published version
+        run: |
+          if npm view "opencode-skill-usage@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::opencode-skill-usage@$VERSION is already published; skipping"
+            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
+          fi
+
+      # A tag checkout has no branch, and pnpm's git checks read the current
+      # branch, so --no-git-checks is required here.
+      - name: Publish to npm
+        if: env.SKIP_PUBLISH != '1'
+        run: pnpm publish --access public --no-git-checks --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+  changelog:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regenerate CHANGELOG.md
+        run: >-
+          npx --yes
+          --package conventional-changelog@8
+          --package conventional-changelog-angular
+          conventional-changelog
+          -p angular -t v -i CHANGELOG.md -o CHANGELOG.md -r 0
+
+      - name: Extract release notes
+        run: |
+          awk -v ver="${GITHUB_REF_NAME#v}" '
+            $0 ~ "^#{1,2} \\[?" ver "\\]?" { found=1; next }
+            found && /^#{1,2} / { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/release-notes.md
+
+      - name: Commit and push CHANGELOG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "no changelog changes"
+            exit 0
+          fi
+          git commit -m "docs(changelog): update for ${GITHUB_REF_NAME}"
+          git fetch origin master
+          git rebase origin/master
+          git push origin HEAD:master
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists, skipping"
+            exit 0
+          fi
+          PRERELEASE=""
+          case "${GITHUB_REF_NAME#v}" in
+            *-*) PRERELEASE="--prerelease" ;;
+          esac
+          if [ -s /tmp/release-notes.md ]; then
+            gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" $PRERELEASE --notes-file /tmp/release-notes.md
+          else
+            echo "no notes for $GITHUB_REF_NAME; using generated notes"
+            gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" $PRERELEASE --generate-notes
+          fi

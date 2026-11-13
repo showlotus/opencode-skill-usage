@@ -1,7 +1,7 @@
 {
   "name": "opencode-skill-usage",
-  "version": "1.4.0",
-  "description": "OpenCode v1/v2 plugin that records skill invocations and auto-registers a /skill-usage command for querying stats",
+  "version": "2.0.0",
+  "description": "OpenCode v2 plugin that records skill invocations and auto-registers a /skill-usage command for querying stats",
   "type": "module",
   "packageManager": "pnpm@8.11.0",
   "exports": {
@@ -32,13 +32,9 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@opencode-ai/plugin": ">=1.14.0",
     "@opencode/plugin": ">=2.0.0"
   },
   "peerDependenciesMeta": {
-    "@opencode-ai/plugin": {
-      "optional": true
-    },
     "@opencode/plugin": {
       "optional": true
     }
