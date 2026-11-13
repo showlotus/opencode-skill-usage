@@ -1,6 +1,6 @@
 # opencode-skill-usage
 
-[![npm version](https://img.shields.io/npm/v/opencode-skill-usage.svg)](https://www.npmjs.com/package/opencode-skill-usage)
+[![npm version](https://img.shields.io/npm/v/@showlotus%2Fopencode-skill-usage.svg)](https://www.npmjs.com/package/@showlotus/opencode-skill-usage)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 
@@ -11,7 +11,7 @@ OpenCode v2 plugin that records skill invocations and auto-registers a `/skill-u
 
 Zero runtime dependencies, plain JavaScript ESM. It uses the opencode 2.x plugin API: `setup()` with `command.transform`, `tool.hook("execute.before")` and `session.hook("prompt")`.
 
-> On opencode 1.x, pin the previous release: `opencode-skill-usage@1`. Version 2.0.0 dropped the `server()` hook that 1.x relied on.
+> Version 2.0.0 moved the package to the `@showlotus` scope and dropped the `server()` hook opencode 1.x relied on. On opencode 1.x, pin the previous unscoped package: `opencode-skill-usage@1`.
 
 ## Install
 
@@ -19,7 +19,7 @@ Add the plugin to `~/.config/opencode/opencode.json`.
 
 ```jsonc
 {
-  "plugins": ["opencode-skill-usage"]
+  "plugins": ["@showlotus/opencode-skill-usage"]
 }
 ```
 

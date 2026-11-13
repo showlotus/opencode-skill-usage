@@ -11,7 +11,7 @@ OpenCode v2 plugin (plain ESM, zero runtime deps) that logs every skill invocati
 
 ## Critical invariants
 
-- Keep the default export shape `{ id, setup }`. opencode 2.x reads `id`/`setup()`; the `server()` hook was removed in 2.0.0, so opencode 1.x users must pin `opencode-skill-usage@1` — do not re-add a v1 path. Do **not** import `@opencode/plugin` — `Plugin.define` is an identity helper and the package must stay zero-dependency.
+- Keep the default export shape `{ id, setup }`. opencode 2.x reads `id`/`setup()`; the `server()` hook was removed in 2.0.0, so opencode 1.x users must pin the previous unscoped package (`opencode-skill-usage@1`) — do not re-add a v1 path. Do **not** import `@opencode/plugin` — `Plugin.define` is an identity helper and the package must stay zero-dependency.
 - `package.json`'s `./server` export is the opencode 2.x server entrypoint convention (`Host.resolve` tries the `server` subpath before `.`), not a v1 leftover — never delete it.
 - `plugin/index.js:17` resolves `../skills/skill-usage/SKILL.md` and reads it **once at module load** (lines 21–29); on read failure it silently falls back to `''`. Renaming/moving that file breaks the command template with no error. Changes to SKILL.md only take effect after an opencode restart (config is loaded once at startup).
 - The log is written to `~/.config/opencode/skill-usage.jsonl` (`plugin/index.js:15`), **outside the repo**. Never create or commit a log file in the repo; `*.log` in `.gitignore` is only for stray repo logs. The legacy name `skill-usage.log` must never be written again — the migration (`plugin/index.js:53`) removes it.
@@ -24,4 +24,5 @@ OpenCode v2 plugin (plain ESM, zero runtime deps) that logs every skill invocati
 - Releases are tag-driven: bump `version` in `package.json`, commit, then `git tag vX.Y.Z && git push origin master --tags`. `.github/workflows/publish.yml` verifies the tag matches the package version, publishes to npm, regenerates `CHANGELOG.md`, and creates the GitHub Release. Nothing publishes from a branch push — only from a `v*` tag.
 - Commit messages must stay conventional (`feat:`, `fix:`, `chore:` …): the changelog is generated from them with the angular preset, and `CHANGELOG.md` is fully regenerated (`-r 0`), so never hand-edit it.
 - The publish job asserts the tarball contains `plugin/index.js` and `skills/skill-usage/SKILL.md` before publishing. Only `plugin/` and `skills/` are published (package.json `files`); keep SKILL.md inside `skills/` or the runtime template load breaks for npm installs.
+- The package is scoped (`@showlotus/opencode-skill-usage`), so `publishConfig.access` is `public` and the workflow still passes `--access public`. The pre-2.0 unscoped `opencode-skill-usage` package stays at 1.x.
 - pnpm 8.11.0 (pinned in `packageManager` and the workflow) and Node 22 in CI. `ai-code-review.yml` needs `CHAT_TOKEN`; publishing needs `NPM_TOKEN`.

@@ -59,8 +59,9 @@ jobs:
 
       - name: Skip already published version
         run: |
-          if npm view "opencode-skill-usage@$VERSION" version >/dev/null 2>&1; then
-            echo "::notice::opencode-skill-usage@$VERSION is already published; skipping"
+          PACKAGE=$(node -p "require('./package.json').name")
+          if npm view "$PACKAGE@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::$PACKAGE@$VERSION is already published; skipping"
             echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
           fi
 

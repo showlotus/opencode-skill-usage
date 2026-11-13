@@ -1,5 +1,5 @@
 {
-  "name": "opencode-skill-usage",
+  "name": "@showlotus/opencode-skill-usage",
   "version": "2.0.0",
   "description": "OpenCode v2 plugin that records skill invocations and auto-registers a /skill-usage command for querying stats",
   "type": "module",
@@ -31,6 +31,9 @@
     "metrics"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "@opencode/plugin": ">=2.0.0"
   },

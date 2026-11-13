@@ -96,7 +96,8 @@ migrateLegacyLog()
 //
 // Only the opencode 2.x plugin API is supported: 2.x reads id/setup() and
 // passes the domain APIs on the context. opencode 1.x called server(); that
-// hook was removed in 2.0.0, so 1.x users must pin opencode-skill-usage@1.
+// hook was removed in 2.0.0, so 1.x users must pin the previous unscoped
+// package, opencode-skill-usage@1.
 export default {
   id: 'skill-usage',
   setup: async (ctx) => {
