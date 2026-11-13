@@ -104,6 +104,11 @@ jobs:
             found && /^#{1,2} / { exit }
             found { print }
           ' CHANGELOG.md > /tmp/release-notes.md
+          # A release with only chore/docs commits gets a heading but no body.
+          # Treat whitespace-only output as empty so the fallback below runs.
+          if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
+            : > /tmp/release-notes.md
+          fi
 
       - name: Commit and push CHANGELOG
         run: |
