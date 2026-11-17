@@ -38,10 +38,10 @@ The log file is named `skill-usage.jsonl`, written automatically by the opencode
 One JSON object per line (JSONL), no header:
 
 ```
-{"timestamp":"2026/08/10 23:28:22","skill":"tech-briefing","directory":"/Users/showlotus/Desktop/MyCode/xxx","call_type":"manual"}
+{"timestamp":"2026/08/10 23:28:22","skill":"tech-briefing","directory":"/Users/showlotus/Desktop/MyCode/xxx","call_type":"manual","session_id":"ses_abc123"}
 ```
 
-The timestamp is local time in `YYYY/MM/DD HH:MM:SS` format. The call_type is manual (user slash-command) or auto (agent-initiated).
+The timestamp is local time in `YYYY/MM/DD HH:MM:SS` format. The call_type is manual (user slash-command) or auto (agent-initiated). The session_id is the opencode session the invocation happened in (`unknown` when unavailable); records written by older plugin versions may lack this field.
 
 ## Query templates
 
@@ -84,7 +84,7 @@ node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split
 
 ```bash
 # Example: all calls of tech-briefing
-node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.skill==="tech-briefing");console.log(r.map(x=>x.timestamp+"\t"+x.directory+"\t"+x.call_type).join("\n"))'
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.skill==="tech-briefing");console.log(r.map(x=>x.timestamp+"\t"+x.directory+"\t"+x.call_type+"\t"+(x.session_id??"-")).join("\n"))'
 ```
 
 ### 6. Combined filter (time + project + call_type + skill)
@@ -93,9 +93,18 @@ node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split
 node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.timestamp>="2026/08/01"&&x.timestamp<"2026/08/09"&&x.directory.includes("opencode-image-vision")&&x.call_type==="manual"),c={};r.forEach(x=>c[x.skill]=(c[x.skill]||0)+1);console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>v+"\t"+k).join("\n"))'
 ```
 
+### 7. Filter by session_id (optional)
+
+Only apply this filter when the user explicitly provides a session id; when no session id is given, do not filter by it (default to querying all records). Useful for looking up which skill invocations belong to a given opencode session.
+
+```bash
+# Example: invocation history of session ses_abc123
+node -e 'const r=require("fs").readFileSync(process.env.LOG,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse).filter(x=>x.session_id==="ses_abc123");console.log(r.map(x=>x.timestamp+"\t"+x.skill+"\t"+x.call_type).join("\n"))'
+```
+
 ## Output requirements
 
 - Render rankings as a Markdown table: skill name | call count, sorted descending by count.
-- For per-skill detail, list timestamp, project directory, and call_type.
+- For per-skill detail, list timestamp, project directory, call_type, and session_id.
 - If the log file is missing or empty, tell the user explicitly that there are no records yet, instead of emitting an empty table.
-- Combine the filters the user mentioned (time, project, skill name, call_type) whenever possible, do not just dump the full ranking.
+- Combine the filters the user mentioned (time, project, skill name, call_type, session_id) whenever possible, do not just dump the full ranking.

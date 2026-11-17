@@ -36,7 +36,7 @@ const timestamp = () => {
 
 // Append one JSONL record. Kept as a single writer so the on-disk format stays
 // identical across plugin versions.
-const appendRecord = (name, callType, directory) => {
+const appendRecord = (name, callType, directory, sessionID) => {
   appendFileSync(
     logPath,
     JSON.stringify({
@@ -44,6 +44,7 @@ const appendRecord = (name, callType, directory) => {
       skill: name,
       directory: directory ?? 'unknown',
       call_type: callType,
+      session_id: sessionID ?? 'unknown',
     }) + '\n'
   )
 }
@@ -91,8 +92,8 @@ migrateLegacyLog()
 // The command registers the bundled skill body as the /skill-usage template so
 // it is available without manual opencode.json skills.paths configuration.
 // Each invocation appends one JSONL line (timestamp, skill name, project
-// directory, call_type) to skill-usage.jsonl next to this file. A legacy
-// skill-usage.log (TSV) is migrated once at module load.
+// directory, call_type, session id) to skill-usage.jsonl next to this file. A
+// legacy skill-usage.log (TSV) is migrated once at module load.
 //
 // Only the opencode 2.x plugin API is supported: 2.x reads id/setup() and
 // passes the domain APIs on the context. opencode 1.x called server(); that
@@ -113,7 +114,7 @@ export default {
         name: 'skill-usage',
         description: 'Query and aggregate skill invocation stats',
         execute: async ({ sessionID, prompt, delivery }) => {
-          appendRecord('skill-usage', 'manual', directory)
+          appendRecord('skill-usage', 'manual', directory, sessionID)
           const args = typeof prompt?.text === 'string' ? prompt.text.trim() : ''
           await ctx.session.prompt({
             ...prompt,
@@ -131,7 +132,7 @@ export default {
     await ctx.tool.hook('execute.before', (event) => {
       if (event.tool !== 'skill') return
       const input = event.input
-      appendRecord(input?.id ?? input?.name ?? 'unknown', 'auto', directory)
+      appendRecord(input?.id ?? input?.name ?? 'unknown', 'auto', directory, event.sessionID)
     })
 
     // User slash-invocations of skills surface as prompt skill attachments.
@@ -152,7 +153,7 @@ export default {
         if (seen.has(key)) continue
         seen.add(key)
         if (seen.size > 500) seen.delete(seen.values().next().value)
-        appendRecord(id, 'manual', directory)
+        appendRecord(id, 'manual', directory, event.sessionID)
       }
     })
   },
