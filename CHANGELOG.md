@@ -1,4 +1,14 @@
 
+# [2.1.0](https://github.com/showlotus/opencode-skill-usage/compare/v2.0.1...v2.1.0) (2026-11-17)
+
+### Bug Fixes
+
+* **ci:** fall back to generated notes when a release body is empty ([05d12fd](https://github.com/showlotus/opencode-skill-usage/commit/05d12fd96a869c53b51f7b8e5d8f63f6e22838d2))
+
+### Features
+
+* record session id in skill usage log ([ea5a8c0](https://github.com/showlotus/opencode-skill-usage/commit/ea5a8c0fe7cfd8637b1ae8e7d4b72cbcf52a834a))
+
 ## [2.0.1](https://github.com/showlotus/opencode-skill-usage/compare/v2.0.0...v2.0.1) (2026-11-13)
 
 # [2.0.0](https://github.com/showlotus/opencode-skill-usage/compare/08a74715dc79c8b1ad5fa8fdeb6db0b85ce1ed87...v2.0.0) (2026-11-13)
